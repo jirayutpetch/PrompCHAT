@@ -1,0 +1,25 @@
+.auth-tabs { display: block; padding: 0; border: 0; background: transparent; }
+.auth-tabs-list { display: grid; width: 100%; height: auto; grid-template-columns: 1fr 1fr; padding: 4px; border: 1px solid #26323e; border-radius: 11px; background: #10171f; }
+.auth-tabs-list button { width: 100%; color: #85929e; background: transparent; box-shadow: none; }
+.auth-tabs-list button[data-state="active"] { color: #e9faff; background: #1a3b4b; box-shadow: inset 0 0 0 1px rgba(127,220,249,.16); }
+.conversation-scroll { min-height: 0; flex: 1; }
+.message-stream { overflow: hidden; }
+.message-agent-avatar { display: grid; width: 25px; height: 25px; flex: 0 0 25px; place-items: center; align-self: flex-end; border-radius: 50%; color: #fff; background: #223f51; font: 700 9px 'Inter', sans-serif; }
+.icon-setting-row { display: grid; gap: 10px; margin-top: 20px; padding-top: 18px; border-top: 1px solid #edf1f2; }
+.icon-setting-row strong { display: block; color: #334651; font-size: 11px; }
+.icon-setting-row small { display: block; margin-top: 4px; color: #98a5ac; font-size: 10px; }
+.icon-choice-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.icon-choice-list button { width: 36px; height: 36px; border: 1px solid #dbe5e9; border-radius: 10px; color: #243d4a; background: #fff; font-size: 15px; }
+.icon-choice-list button.selected { border-color: #35c2f0; background: #e9f9fe; box-shadow: 0 0 0 2px rgba(53,194,240,.15); }
+.admin-composer-wrap { position: relative; }
+.composer-file { position: relative; cursor: pointer; }
+.composer-file input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.admin-attachment { display: flex; align-items: center; gap: 6px; margin: 0 0 7px; padding: 7px 9px; border-radius: 8px; color: #527382; background: #e9f8fc; font-size: 10px; }
+.admin-attachment span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-attachment button { border: 0; color: #527382; background: transparent; }
+.admin-emoji-popover { position: absolute; right: 32px; bottom: 49px; z-index: 5; display: grid; grid-template-columns: repeat(4, 33px); gap: 4px; padding: 7px; border: 1px solid #dce9ee; border-radius: 10px; background: #fff; box-shadow: 0 8px 25px #153e5029; }
+.admin-emoji-popover button { width: 33px; height: 33px; border: 0; border-radius: 7px; background: #f2f7f9; }
+.message-download, .embed-download { display: flex; align-items: center; gap: 5px; margin-top: 7px; padding: 5px 7px; border: 1px solid currentColor; border-radius: 6px; color: inherit; background: transparent; font-size: 10px; }
+.embed-download { font-size: 9px; }
+.api-docs-body { display: grid; grid-template-columns: 170px 1fr; gap: 10px; color: #536c77; font-size: 12px; }
+.api-docs-body code { padding: 6px; border-radius: 5px; color: #236d88; background: #edf8fb; font-size: 11px; }

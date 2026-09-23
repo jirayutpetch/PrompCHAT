@@ -1,0 +1,13 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Prompt:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+@import "../src/index.css";
+@import "../src/widget.css";
+@import "../src/api.css";
+@import "../src/enhancements.css";
+
+@theme {
+  --color-prompt-ink: #0b1219;
+  --color-prompt-ocean: #153e50;
+  --color-prompt-sky: #35c2f0;
+  --font-prompt: 'Prompt', 'Inter', sans-serif;
+}
