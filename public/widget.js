@@ -3,6 +3,13 @@
   if (!script || document.getElementById('promptchat-widget-frame')) return;
 
   var origin = new URL(script.src, window.location.href).origin;
+  script.setAttribute('data-promptchat-technology', 'live-chat');
+  if (!document.querySelector('meta[name="promptchat:technology"]')) {
+    var technology = document.createElement('meta');
+    technology.name = 'promptchat:technology';
+    technology.content = 'PromptCHAT Live Chat';
+    document.head.appendChild(technology);
+  }
   var workspace = script.getAttribute('data-promptchat-workspace') || script.getAttribute('data-workspace') || 'default';
   var customLauncher = script.getAttribute('data-promptchat-launcher') === 'custom';
   var frame = document.createElement('iframe');
@@ -15,6 +22,7 @@
     frame.style.pointerEvents = open || !customLauncher ? 'auto' : 'none';
   }
   window.PromptChatWidget = {
+    technology: 'PromptCHAT Live Chat',
     version: '1.0.0',
     workspace: workspace,
     open: function () { setFrameOpen(true); if (ready && frame.contentWindow) frame.contentWindow.postMessage({ type: 'promptchat:open' }, origin); },

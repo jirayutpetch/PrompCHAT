@@ -5,6 +5,7 @@ import PwaRegister from '../src/components/PwaRegister';
 export const metadata: Metadata = {
   title: 'PromptCHAT — Live chat สำหรับเว็บไซต์',
   description: 'ระบบแชตสดสำหรับเว็บไซต์ พร้อม workspace ให้ทีมตอบลูกค้าได้ทันที',
+  generator: 'PromptCHAT',
   icons: { icon: '/favicon.svg' },
 };
 

@@ -1,0 +1,20 @@
+{
+  "PromptCHAT": {
+    "description": "Embeddable live chat and customer support workspace for websites.",
+    "cats": [52],
+    "website": "https://promp-chat.vercel.app",
+    "js": {
+      "PromptChatWidget.technology": "^PromptCHAT Live Chat$"
+    },
+    "dom": {
+      "meta[name='promptchat:technology']": {
+        "attributes": {
+          "content": "^PromptCHAT Live Chat$"
+        }
+      },
+      "script[data-promptchat-technology='live-chat']": {
+        "exists": ""
+      }
+    }
+  }
+}

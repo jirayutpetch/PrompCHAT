@@ -6,8 +6,8 @@ create table if not exists public.workspaces (
   embed_key text unique not null default encode(gen_random_bytes(16), 'hex'), created_at timestamptz not null default now()
 );
 create table if not exists public.agents (
-  id uuid primary key references auth.users(id) on delete cascade, workspace_id uuid not null references public.workspaces(id) on delete cascade,
-  display_name text, avatar_url text, role text not null default 'owner', created_at timestamptz not null default now(), unique(id, workspace_id)
+  id uuid not null references auth.users(id) on delete cascade, workspace_id uuid not null references public.workspaces(id) on delete cascade,
+  display_name text, avatar_url text, role text not null default 'owner', created_at timestamptz not null default now(), primary key(id, workspace_id)
 );
 create table if not exists public.visitors (
   id uuid primary key default gen_random_uuid(), workspace_id uuid not null references public.workspaces(id) on delete cascade,
