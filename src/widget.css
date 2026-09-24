@@ -20,7 +20,7 @@
 .embed-emoji-popover { position: absolute; right: 5px; bottom: 49px; z-index: 5; display: grid; grid-template-columns: repeat(5, 32px); gap: 4px; padding: 7px; border: 1px solid #dce9ee; border-radius: 10px; background: #fff; box-shadow: 0 8px 25px #153e5029; }
 .embed-emoji-popover button { color: #20333d; background: #f2f7f9; font-size: 16px; }
 html:has(.embed-widget-root), body:has(.embed-widget-root) { background: transparent; }
-html[data-promptchat-launcher="custom"] .embed-bubble { display: none; }
+html[data-prompchat-launcher="custom"] .embed-bubble { display: none; }
 .launcher-choice { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin: 14px 0; color: #45606e; font-size: 13px; }
 .launcher-choice > span { font-weight: 700; color: #142f3a; }
 .launcher-choice label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }

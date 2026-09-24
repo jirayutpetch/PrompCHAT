@@ -3,9 +3,9 @@ import './globals.css';
 import PwaRegister from '../src/components/PwaRegister';
 
 export const metadata: Metadata = {
-  title: 'PromptCHAT — Live chat สำหรับเว็บไซต์',
+  title: 'PrompCHAT — Live chat สำหรับเว็บไซต์',
   description: 'ระบบแชตสดสำหรับเว็บไซต์ พร้อม workspace ให้ทีมตอบลูกค้าได้ทันที',
-  generator: 'PromptCHAT',
+  generator: 'PrompCHAT',
   icons: { icon: '/favicon.svg' },
 };
 

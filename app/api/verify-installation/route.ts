@@ -22,10 +22,10 @@ export async function POST(request: Request) {
   if (!validPublicDomain(workspace.domain)) return Response.json({ verified: false, reason: 'invalid_public_domain' }, { status: 400 });
   const target = `https://${workspace.domain}/`;
   try {
-    const response = await fetch(target, { headers: { 'user-agent': 'PromptCHAT-installation-check/1.0' }, redirect: 'error', signal: AbortSignal.timeout(7000) });
+    const response = await fetch(target, { headers: { 'user-agent': 'PrompCHAT-installation-check/1.0' }, redirect: 'error', signal: AbortSignal.timeout(7000) });
     if (!response.ok || !response.headers.get('content-type')?.includes('text/html')) return Response.json({ verified: false, reason: 'page_unavailable', status: response.status });
     const html = (await response.text()).slice(0, 1_000_000);
-    const verified = html.includes(`data-promptchat-workspace="${embedKey}"`) || html.includes(`data-workspace="${embedKey}"`);
+    const verified = html.includes(`data-prompchat-workspace="${embedKey}"`) || html.includes(`data-promptchat-workspace="${embedKey}"`) || html.includes(`data-workspace="${embedKey}"`);
     if (verified) await supabase.from('workspaces').update({ domain_verified: true }).eq('id', workspace.id);
     return Response.json({ verified, checkedUrl: target });
   } catch {

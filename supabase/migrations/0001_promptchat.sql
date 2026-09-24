@@ -27,7 +27,7 @@ create table if not exists public.messages (
   foreign key (conversation_id, workspace_id) references public.conversations(id, workspace_id) on delete cascade
 );
 create table if not exists public.workspace_settings (
-  workspace_id uuid primary key references public.workspaces(id) on delete cascade, brand_name text not null default 'PromptCHAT', logo_url text,
+  workspace_id uuid primary key references public.workspaces(id) on delete cascade, brand_name text not null default 'PrompCHAT', logo_url text,
   bubble_icon text not null default 'message-circle', color_primary text not null default '#35C2F0', color_bg text not null default '#0B0B0D', color_accent text not null default '#35C2F0',
   widget_position text not null default 'bottom-right', welcome_message text not null default 'สวัสดีค่ะ มีอะไรให้เราช่วยไหมคะ?', offline_message text not null default 'ตอนนี้ทีมงานไม่อยู่ ฝากข้อความไว้ได้เลยค่ะ',
   bot_enabled boolean not null default true, bot_handoff_keyword text not null default 'คุยกับแอดมิน', ai_fallback_enabled boolean not null default false, ai_max_calls_per_conversation int not null default 5, updated_at timestamptz not null default now()
@@ -126,8 +126,8 @@ begin
   select w.id into target_workspace from public.workspaces w where w.embed_key = widget_key and w.domain_verified = true;
   if target_workspace is null then raise exception 'invalid_widget_key'; end if;
   insert into public.visitors (workspace_id, auth_user_id, session_id)
-  values (target_workspace, auth.uid(), encode(gen_random_bytes(16), 'hex'))
-  on conflict (workspace_id, auth_user_id) do update set auth_user_id = excluded.auth_user_id
+  values (target_workspace, auth.uid(), encode(extensions.gen_random_bytes(16), 'hex'))
+  on conflict on constraint visitors_workspace_id_auth_user_id_key do update set auth_user_id = excluded.auth_user_id
   returning id into target_visitor;
   return query select target_workspace, target_visitor;
 end;
@@ -142,14 +142,14 @@ with check (bucket_id = 'chat-attachments' and public.is_workspace_member((stora
 create policy "visitors upload own chat files" on storage.objects for insert to authenticated
 with check (bucket_id = 'chat-attachments' and exists (
   select 1 from public.conversations c join public.visitors v on v.id = c.visitor_id and v.workspace_id = c.workspace_id
-  where c.workspace_id::text = (storage.foldername(name))[1] and c.id::text = (storage.foldername(name))[2] and v.auth_user_id = auth.uid()
+  where c.workspace_id::text = (storage.foldername(storage.objects.name))[1] and c.id::text = (storage.foldername(storage.objects.name))[2] and v.auth_user_id = auth.uid()
 ));
 create policy "workspace members read chat files" on storage.objects for select to authenticated
 using (bucket_id = 'chat-attachments' and public.is_workspace_member((storage.foldername(name))[1]::uuid));
 create policy "visitors read own chat files" on storage.objects for select to authenticated
 using (bucket_id = 'chat-attachments' and exists (
   select 1 from public.conversations c join public.visitors v on v.id = c.visitor_id and v.workspace_id = c.workspace_id
-  where c.workspace_id::text = (storage.foldername(name))[1] and c.id::text = (storage.foldername(name))[2] and v.auth_user_id = auth.uid()
+  where c.workspace_id::text = (storage.foldername(storage.objects.name))[1] and c.id::text = (storage.foldername(storage.objects.name))[2] and v.auth_user_id = auth.uid()
 ));
 
 alter publication supabase_realtime add table public.conversations;
