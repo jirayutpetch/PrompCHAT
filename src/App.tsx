@@ -117,30 +117,7 @@ export default function App({ initialView = 'overview' }: { initialView?: View }
   }, []);
   if (!ready) return null;
   if (isWidget) return <EmbeddedWidget />;
-  return <>{isPasswordRecovery ? <PasswordRecoveryScreen onComplete={() => setIsPasswordRecovery(false)} /> : session ? (isLocalPreview() ? <Workspace initialView={initialView} onLogout={() => { localStorage.removeItem('promptchat-session'); setSession(false); }} /> : <WorkspaceGate initialView={initialView} onLogout={() => { void supabase?.auth.signOut(); setSession(false); }} />) : <AuthScreen onAuthenticated={() => { if (isLocalPreview()) localStorage.setItem('promptchat-session', 'active'); setSession(true); }} />}<SupportChatLauncher /></>;
-}
-
-function SupportChatLauncher() {
-  useEffect(() => {
-    if (isLocalPreview() || document.getElementById('prompchat-support-script')) return;
-    const script = document.createElement('script');
-    script.id = 'prompchat-support-script';
-    script.src = `${window.location.origin}/widget.js`;
-    script.async = true;
-    script.setAttribute('data-prompchat-workspace', 'a68157ad70d5fbd7601cf69f7b2fb85f');
-    script.setAttribute('data-prompchat-domain', window.location.hostname);
-    script.setAttribute('data-prompchat-launcher', 'custom');
-    document.body.appendChild(script);
-    return () => { script.remove(); document.getElementById('promptchat-widget-frame')?.remove(); };
-  }, []);
-  function openSupport() {
-    const widget = window as Window & { PrompChatWidget?: { open: () => void } };
-    if (widget.PrompChatWidget) { widget.PrompChatWidget.open(); return; }
-    const destination = isLocalPreview() ? new URL('https://prompchat.vercel.app/') : new URL(window.location.href);
-    destination.searchParams.set('support', '1');
-    window.open(destination.toString(), '_blank', 'noopener,noreferrer');
-  }
-  return <button className="main-support-launcher" onClick={openSupport} aria-label="เปิดแชทกับทีมงาน PrompCHAT" title="คุยกับทีมงาน"><img src={avatar} alt=""/></button>;
+  return isPasswordRecovery ? <PasswordRecoveryScreen onComplete={() => setIsPasswordRecovery(false)} /> : session ? (isLocalPreview() ? <Workspace initialView={initialView} onLogout={() => { localStorage.removeItem('promptchat-session'); setSession(false); }} /> : <WorkspaceGate initialView={initialView} onLogout={() => { void supabase?.auth.signOut(); setSession(false); }} />) : <AuthScreen onAuthenticated={() => { if (isLocalPreview()) localStorage.setItem('promptchat-session', 'active'); setSession(true); }} />;
 }
 
 function AuthScreen({ onAuthenticated }: { onAuthenticated: () => void }) {
