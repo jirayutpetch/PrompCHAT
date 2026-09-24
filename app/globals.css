@@ -4,6 +4,8 @@
 @import "../src/widget.css";
 @import "../src/api.css";
 @import "../src/enhancements.css";
+@import "../src/guide.css";
+@import "../src/onboarding.css";
 
 @theme {
   --color-prompt-ink: #0b1219;

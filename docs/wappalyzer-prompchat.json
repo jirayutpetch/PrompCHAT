@@ -3,9 +3,16 @@
     "description": "Embeddable live chat and customer support workspace for websites.",
     "cats": [52],
     "website": "https://prompchat.vercel.app",
+    "icon": "prompchat.png",
+    "saas": true,
     "js": {
+      "PrompCHAT.technology": "^PrompCHAT Live Chat$",
       "PrompChatWidget.technology": "^PrompCHAT Live Chat$"
     },
+    "scriptSrc": [
+      "prompchat\\.vercel\\.app/widget\\.js",
+      "prompchat\\.vercel\\.app/prompchat-detection\\.js"
+    ],
     "dom": {
       "meta[name='prompchat:technology']": {
         "attributes": {

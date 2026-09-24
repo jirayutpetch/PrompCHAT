@@ -3,6 +3,7 @@
   if (!script || document.getElementById('promptchat-widget-frame')) return;
 
   var origin = new URL(script.src, window.location.href).origin;
+  window.PrompCHAT = { technology: 'PrompCHAT Live Chat', version: '1.0.0' };
   script.setAttribute('data-prompchat-technology', 'live-chat');
   if (!document.querySelector('meta[name="prompchat:technology"]')) {
     var technology = document.createElement('meta');

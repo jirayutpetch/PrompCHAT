@@ -12,5 +12,5 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { themeColor: '#0b1219', width: 'device-width', initialScale: 1 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="th"><body><PwaRegister />{children}</body></html>;
+  return <html lang="th"><body><PwaRegister /><script src="/prompchat-detection.js" defer data-prompchat-technology="live-chat" />{children}</body></html>;
 }
