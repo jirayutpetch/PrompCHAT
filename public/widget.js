@@ -15,7 +15,8 @@
   var customLauncher = (script.getAttribute('data-prompchat-launcher') || script.getAttribute('data-promptchat-launcher')) === 'custom';
   var frame = document.createElement('iframe');
   var ready = false;
-  var requestedOpen = !customLauncher;
+  var autoOpenSupport = new URLSearchParams(window.location.search).get('support') === '1';
+  var requestedOpen = !customLauncher || autoOpenSupport;
   function setFrameOpen(open) {
     requestedOpen = open;
     frame.style.width = open ? '380px' : customLauncher ? '0' : '82px';
@@ -37,7 +38,7 @@
   frame.setAttribute('data-promptchat-widget', '1');
   frame.setAttribute('allow', 'clipboard-write');
   frame.style.cssText = 'position:fixed;right:18px;bottom:18px;width:380px;height:620px;border:0;background:transparent;z-index:2147483000;pointer-events:auto;';
-  if (customLauncher) setFrameOpen(false);
+  if (customLauncher) setFrameOpen(requestedOpen);
   frame.addEventListener('load', function () {
     ready = true;
     if (frame.contentWindow) frame.contentWindow.postMessage({ type: requestedOpen ? 'promptchat:open' : 'promptchat:close' }, origin);

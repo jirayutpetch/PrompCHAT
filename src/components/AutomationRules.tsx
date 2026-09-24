@@ -15,8 +15,8 @@ const sampleTriggers: BotTrigger[] = [
 ];
 
 export default function AutomationRules({ workspaceId, onQuickRepliesChange }: { workspaceId?: string; onQuickRepliesChange: (items: string[]) => void }) {
-  const [replies, setReplies] = useState(sampleReplies);
-  const [triggers, setTriggers] = useState(sampleTriggers);
+  const [replies, setReplies] = useState<QuickReply[]>(() => workspaceId ? [] : sampleReplies);
+  const [triggers, setTriggers] = useState<BotTrigger[]>(() => workspaceId ? [] : sampleTriggers);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const fileRef = useRef<HTMLInputElement>(null);
@@ -25,16 +25,18 @@ export default function AutomationRules({ workspaceId, onQuickRepliesChange }: {
     let current = true;
     const load = async () => {
       if (workspaceId && supabase) {
+        setReplies([]); setTriggers([]); setNotice('กำลังโหลดชุดคำตอบ…');
         const [quickResult, triggerResult] = await Promise.all([
           supabase.from('canned_responses').select('id,shortcut,body').eq('workspace_id', workspaceId).order('created_at'),
           supabase.from('bot_triggers').select('id,keywords,reply_text,match_type,is_active,sort_order').eq('workspace_id', workspaceId).order('sort_order'),
         ]);
         if (!current) return;
         if (quickResult.error || triggerResult.error) { setNotice('โหลดกฎอัตโนมัติไม่สำเร็จ กรุณาลองใหม่'); return; }
-        const nextReplies: QuickReply[] = quickResult.data?.length ? quickResult.data.map((item, i) => ({ id: item.id, label: item.shortcut, reply_text: item.body, is_active: true, sort_order: i })) : sampleReplies;
-        const nextTriggers = (triggerResult.data?.length ? triggerResult.data : sampleTriggers) as BotTrigger[];
+        const nextReplies: QuickReply[] = (quickResult.data || []).map((item, i) => ({ id: item.id, label: item.shortcut, reply_text: item.body, is_active: true, sort_order: i }));
+        const nextTriggers = (triggerResult.data || []) as BotTrigger[];
         setReplies(nextReplies); setTriggers(nextTriggers);
         onQuickRepliesChange(nextReplies.filter((item) => item.is_active).map((item) => item.reply_text));
+        setNotice('');
       } else {
         try {
           const saved = JSON.parse(localStorage.getItem('promptchat-automation-v1') || 'null') as { replies?: QuickReply[]; triggers?: BotTrigger[] } | null;

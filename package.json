@@ -3,13 +3,14 @@
   "private": true,
   "version": "0.0.0",
   "engines": {
-    "node": "26.x"
+    "node": "24.x"
   },
   "type": "module",
   "scripts": {
     "dev": "node scripts/with-local-env.mjs dev",
     "build": "node scripts/with-local-env.mjs build",
     "start": "node scripts/with-local-env.mjs start",
+    "test": "node --test tests/*.test.ts",
     "clean": "node -e \"require('node:fs').rmSync('.next',{recursive:true,force:true})\"",
     "lint": "tsc --noEmit"
   },
