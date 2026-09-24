@@ -12,7 +12,7 @@ Live chat สำหรับฝังบนเว็บไซต์อื่น 
 
 ## Supabase และ Vercel
 
-เปิด Anonymous Sign-in และอีเมลใน Supabase Auth จากนั้นรัน migration ใน `supabase/migrations/0001_promptchat.sql` ตรวจ RLS, Storage และ Realtime ก่อนเปิดใช้งานจริง ตั้งค่า env สองตัวข้างบนใน Vercel แล้ว deploy จาก GitHub
+เปิด Anonymous Sign-in และอีเมลใน Supabase Auth จากนั้นรัน migration ทั้งหมดใน `supabase/migrations/` ตามลำดับ 0001–0004 ตรวจ RLS, Storage และ Realtime ก่อนเปิดใช้งานจริง ตั้งค่า env สองตัวข้างบนใน Vercel แล้ว deploy จาก GitHub
 
 ## ฝังบนเว็บลูกค้า
 

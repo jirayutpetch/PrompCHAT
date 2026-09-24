@@ -11,6 +11,7 @@
 .icon-choice-list { display: flex; flex-wrap: wrap; gap: 8px; }
 .icon-choice-list button { width: 36px; height: 36px; border: 1px solid #dbe5e9; border-radius: 10px; color: #243d4a; background: #fff; font-size: 15px; }
 .icon-choice-list button.selected { border-color: #35c2f0; background: #e9f9fe; box-shadow: 0 0 0 2px rgba(53,194,240,.15); }
+.icon-choice-list button.active { border-color: #35c2f0; background: #e9f9fe; box-shadow: 0 0 0 2px rgba(53,194,240,.15); }
 .admin-composer-wrap { position: relative; }
 .composer-file { position: relative; cursor: pointer; }
 .composer-file input[type="file"] { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }

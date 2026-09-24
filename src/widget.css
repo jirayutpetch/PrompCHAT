@@ -8,6 +8,7 @@
 @keyframes widget-pulse { 0%, 100% { transform: scale(.95); opacity: .4; } 50% { transform: scale(1.08); opacity: 1; } }
 @media (max-width: 650px) { .embed-panel { width: min(342px, calc(100vw - 28px)); height: min(540px, calc(100vh - 28px)); }.embed-widget-root { padding: 14px; } }
 .embed-message-line { display: block; white-space: pre-wrap; overflow-wrap: anywhere; }
+.embed-message-icon { display: inline-grid; place-items: center; min-width: 21px; height: 21px; margin-right: 6px; padding: 0 3px; border-radius: 50%; background: rgba(255,255,255,.68); color: #153e50; font: 700 10px 'Inter', sans-serif; vertical-align: middle; }
 .embed-attachment { display: flex; align-items: center; gap: 6px; padding: 8px 12px; color: #476777; background: #e9f8fc; font-size: 10px; }
 .embed-attachment span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .embed-attachment button { display: grid; place-items: center; border: 0; color: #476777; background: transparent; }
