@@ -1,15 +1,9 @@
-import { NextRequest } from 'next/server';
+export const runtime = 'nodejs';
 
-export const runtime = 'edge';
-
-type Trigger = { keywords: string[]; reply_text: string; match_type?: 'contains' | 'exact' };
-
-export async function POST(request: NextRequest) {
-  const { message, handoffKeyword = 'คุยกับแอดมิน', triggers = [] } = await request.json() as { message?: string; handoffKeyword?: string; triggers?: Trigger[] };
-  const text = String(message || '').trim();
-  if (!text) return Response.json({ handledBy: 'none', reply: null }, { status: 400 });
-  if (text.toLowerCase().includes(handoffKeyword.toLowerCase())) return Response.json({ handledBy: 'agent', reply: null });
-  const matched = triggers.find((trigger) => trigger.match_type === 'exact' ? trigger.keywords.some((keyword) => text.toLowerCase() === keyword.toLowerCase()) : trigger.keywords.some((keyword) => text.toLowerCase().includes(keyword.toLowerCase())));
-  if (matched) return Response.json({ handledBy: 'bot', reply: matched.reply_text });
-  return Response.json({ handledBy: 'none', reply: null });
+export async function POST() {
+  return Response.json({
+    error: 'endpoint_retired',
+    message: 'กฎตอบอัตโนมัติจะประมวลผลจาก Supabase หลังตรวจสิทธิ์ visitor และ rate limit แล้ว ไม่รับ triggers ที่ผู้เรียกส่งมาเอง',
+    replacement: 'ส่งข้อความผ่าน widget ที่ติดตั้ง แล้วระบบจะตรวจ bot_triggers ฝั่งฐานข้อมูล',
+  }, { status: 410, headers: { 'Cache-Control': 'no-store' } });
 }

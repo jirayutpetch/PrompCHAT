@@ -19,9 +19,38 @@ export async function createWorkspace(name: string, domain: string): Promise<Rem
   if (!supabase) throw new Error('Supabase ยังไม่ได้ตั้งค่า');
   const { data: user } = await supabase.auth.getUser();
   if (!user.user) throw new Error('กรุณาเข้าสู่ระบบ');
+  const { count, error: countError } = await supabase.from('workspaces').select('id', { count: 'exact', head: true }).eq('owner_id', user.user.id);
+  if (countError) throw countError;
+  if ((count || 0) >= 5) throw new Error('บัญชีนี้มีครบ 5 เว็บไซต์แล้ว ลบ workspace ที่ไม่ใช้ก่อนจึงสร้างเพิ่มได้');
+  const { data: existing, error: existingError } = await supabase.from('workspaces').select('id').eq('owner_id', user.user.id).ilike('domain', domain).limit(1);
+  if (existingError) throw existingError;
+  if (existing?.length) throw new Error('โดเมนนี้มี workspace แล้ว กรุณาเลือก workspace เดิมหรือใช้โดเมนอื่น');
   const { data, error } = await supabase.from('workspaces').insert({ owner_id: user.user.id, name, domain }).select('id,name,domain,domain_verified,embed_key').single();
-  if (error || !data) throw error || new Error('สร้าง workspace ไม่สำเร็จ');
+  if (error || !data) {
+    if (error?.message.includes('workspace_domain_already_exists')) throw new Error('โดเมนนี้มี workspace แล้ว กรุณาเลือก workspace เดิมหรือใช้โดเมนอื่น');
+    if (error?.message.includes('workspace_limit_reached')) throw new Error('บัญชีนี้มีครบ 5 เว็บไซต์แล้ว ลบ workspace ที่ไม่ใช้ก่อนจึงสร้างเพิ่มได้');
+    throw error || new Error('สร้าง workspace ไม่สำเร็จ');
+  }
   return data as RemoteWorkspace;
+}
+
+export async function deleteWorkspace(workspaceId: string) {
+  if (!supabase) throw new Error('Supabase ยังไม่ได้ตั้งค่า');
+  const { data: user } = await supabase.auth.getUser();
+  if (!user.user) throw new Error('กรุณาเข้าสู่ระบบ');
+  const { data: conversations, error: conversationError } = await supabase.from('conversations').select('id').eq('workspace_id', workspaceId).limit(10000);
+  if (conversationError) throw conversationError;
+  for (const conversation of conversations || []) {
+    const { data: files, error: listError } = await supabase.storage.from('chat-attachments').list(`${workspaceId}/${conversation.id}`, { limit: 1000 });
+    if (listError) throw listError;
+    const paths = (files || []).filter((file) => file.id).map((file) => `${workspaceId}/${conversation.id}/${file.name}`);
+    if (paths.length) {
+      const { error } = await supabase.storage.from('chat-attachments').remove(paths);
+      if (error) throw error;
+    }
+  }
+  const { error } = await supabase.from('workspaces').delete().eq('id', workspaceId).eq('owner_id', user.user.id);
+  if (error) throw error;
 }
 
 export async function loadWorkspaceChat(workspaceId: string) {
@@ -93,13 +122,14 @@ export function getWidgetClient(): SupabaseClient | null {
   return widgetClient;
 }
 
-export async function initializeWidget(embedKey: string) {
+export async function initializeWidget(embedKey: string, siteOrigin: string) {
   const client = getWidgetClient();
   if (!client) throw new Error('Supabase ยังไม่ได้ตั้งค่า');
+  if (!siteOrigin || new URL(siteOrigin).protocol !== 'https:') throw new Error('ไม่พบโดเมนเว็บไซต์ที่ฝังแชต กรุณาอนุญาต referrer และใช้ HTTPS');
   const { data: auth } = await client.auth.getUser();
   if (!auth.user) { const result = await client.auth.signInAnonymously(); if (result.error) throw result.error; }
-  const { data, error } = await client.rpc('initialize_widget_visitor', { widget_key: embedKey });
-  if (error || !data?.[0]) throw error || new Error('รหัสวิดเจ็ตไม่ถูกต้องหรือยังไม่ยืนยันโดเมน');
+  const { data, error } = await client.rpc('initialize_widget_visitor', { widget_key: embedKey, site_origin: siteOrigin });
+  if (error || !data?.[0]) throw error || new Error('โดเมนต้นทางไม่ตรงกับ workspace หรือถูกปิดการส่ง referrer');
   return { client, workspaceId: data[0].workspace_id as string, visitorId: data[0].visitor_id as string };
 }
 
@@ -114,16 +144,27 @@ export async function getOrCreateVisitorConversation(client: SupabaseClient, wor
 export async function sendRemoteVisitorMessage(client: SupabaseClient, workspaceId: string, conversationId: string, body: string) {
   const { data: user } = await client.auth.getUser();
   if (!user.user) throw new Error('ไม่พบ visitor session');
-  const { error } = await client.from('messages').insert({ workspace_id: workspaceId, conversation_id: conversationId, sender_type: 'visitor', sender_id: user.user.id, body });
+  const { data: inserted, error } = await client.from('messages').insert({ workspace_id: workspaceId, conversation_id: conversationId, sender_type: 'visitor', sender_id: user.user.id, body }).select('id').single();
+  if (error?.code === 'PGRST116') throw new Error('ส่งข้อความถี่เกินไป ระบบจำกัดไว้ 12 ข้อความต่อนาที กรุณารอสักครู่');
   if (error) throw error;
+  const { error: automationError } = await client.rpc('apply_visitor_automation', { target_conversation: conversationId, target_message: inserted.id });
+  if (automationError) throw automationError;
 }
 
 export async function sendRemoteVisitorAttachment(client: SupabaseClient, workspaceId: string, conversationId: string, body: string, file: File) {
   const { data: user } = await client.auth.getUser();
   if (!user.user) throw new Error('ไม่พบ visitor session');
   const path = await uploadRemoteAttachment(client, workspaceId, conversationId, file);
-  const { error } = await client.from('messages').insert({ workspace_id: workspaceId, conversation_id: conversationId, sender_type: 'visitor', sender_id: user.user.id, body, attachment_url: path, attachment_name: file.name, attachment_type: file.type, attachment_size: file.size });
+  const { data: inserted, error } = await client.from('messages').insert({ workspace_id: workspaceId, conversation_id: conversationId, sender_type: 'visitor', sender_id: user.user.id, body, attachment_url: path, attachment_name: file.name, attachment_type: file.type, attachment_size: file.size }).select('id').single();
+  if (error?.code === 'PGRST116') {
+    await client.storage.from('chat-attachments').remove([path]);
+    throw new Error('ส่งข้อความหรือไฟล์ถี่เกินไป ระบบจำกัดไว้ 12 รายการต่อนาที กรุณารอสักครู่');
+  }
   if (error) throw error;
+  if (body.trim()) {
+    const { error: automationError } = await client.rpc('apply_visitor_automation', { target_conversation: conversationId, target_message: inserted.id });
+    if (automationError) throw automationError;
+  }
 }
 
 export function subscribeVisitorConversation(client: SupabaseClient, conversationId: string, onMessage: (message: RemoteMessage) => void) {

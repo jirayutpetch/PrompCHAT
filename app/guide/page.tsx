@@ -25,7 +25,7 @@ export default function GuidePage() {
 
       <aside className="guide-custom"><h2>ใช้ปุ่มแชตของเว็บไซต์ตัวเอง</h2><p>เลือก “ใช้ปุ่มของเว็บไซต์ฉัน” ตอนคัดลอกโค้ด แล้วเรียกเปิดหน้าต่างด้วยปุ่มของคุณ:</p><pre className="guide-code"><code>{'<button onclick="window.PrompChatWidget.open()">แชตกับเรา</button>'}</code></pre><p>สั่งปิดด้วย <code>window.PrompChatWidget.close()</code> หรือสลับสถานะด้วย <code>window.PrompChatWidget.toggle()</code></p></aside>
       <aside className="guide-custom"><h2>Embed ID กับ Secret API key ต่างกันอย่างไร?</h2><p>สคริปต์ด้านบนคือ JavaScript widget สำหรับแสดงหน้าต่างแชตบนเว็บไซต์ ค่า workspace ID ใช้ระบุเว็บและมองเห็นได้ในหน้าเว็บตามปกติ ส่วน REST API key สำหรับเชื่อมระบบหลังบ้านเป็นคนละอย่าง — ตอนนี้ PrompCHAT ยังไม่มีหน้าออก API key หรือ public conversation REST API/Webhooks ให้ใช้งาน จึงห้ามนำ Supabase service-role key มาใส่ในเว็บลูกค้าเด็ดขาด</p></aside>
-      <footer className="guide-footer"><span>ติดขัดระหว่างติดตั้ง?</span><Link href="/">เปิด PrompCHAT <span>→</span></Link></footer>
+      <footer className="guide-footer"><span>ติดขัดระหว่างติดตั้ง?</span><a href="/promptchat-install-guide.md" download>ดาวน์โหลดคู่มือ (.md) ↓</a><Link href="/">เปิด PrompCHAT <span>→</span></Link></footer>
     </article>
   </main>;
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { type CSSProperties, FormEvent, useEffect, useMemo, useState } from 'react';
+import { type CSSProperties, FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Bell,
   Bot,
@@ -26,6 +26,7 @@ import {
   Settings,
   Smile,
   Sparkles,
+  Trash2,
   Users,
   X,
   Zap,
@@ -46,7 +47,8 @@ import { formatBytes, optimizeUpload, type OptimizedUpload } from './services/me
 import { openPreviewAttachment, savePreviewAttachment } from './services/previewAttachments';
 import { supabase } from '../lib/supabase';
 import WorkspaceSettings, { defaultChatSettings, type ChatSettings } from './components/WorkspaceSettings';
-import { createWorkspace, downloadRemoteAttachment, getOrCreateVisitorConversation, getWidgetClient, initializeWidget, listWorkspaces, loadWorkspaceChat, sendRemoteAgentAttachment, sendRemoteAgentMessage, sendRemoteVisitorAttachment, sendRemoteVisitorMessage, subscribeVisitorConversation, subscribeWorkspaceChat, type RemoteWorkspace } from './services/supabaseChat';
+import AutomationRules from './components/AutomationRules';
+import { createWorkspace, deleteWorkspace, downloadRemoteAttachment, getOrCreateVisitorConversation, getWidgetClient, initializeWidget, listWorkspaces, loadWorkspaceChat, sendRemoteAgentAttachment, sendRemoteAgentMessage, sendRemoteVisitorAttachment, sendRemoteVisitorMessage, subscribeVisitorConversation, subscribeWorkspaceChat, type RemoteWorkspace } from './services/supabaseChat';
 
 const logo = logoImage.src;
 const avatar = avatarImage.src;
@@ -111,7 +113,30 @@ export default function App() {
   }, []);
   if (!ready) return null;
   if (isWidget) return <EmbeddedWidget />;
-  return session ? (isLocalPreview() ? <Workspace onLogout={() => { localStorage.removeItem('promptchat-session'); setSession(false); }} /> : <WorkspaceGate onLogout={() => { void supabase?.auth.signOut(); setSession(false); }} />) : <AuthScreen onAuthenticated={() => { if (isLocalPreview()) localStorage.setItem('promptchat-session', 'active'); setSession(true); }} />;
+  return <>{session ? (isLocalPreview() ? <Workspace onLogout={() => { localStorage.removeItem('promptchat-session'); setSession(false); }} /> : <WorkspaceGate onLogout={() => { void supabase?.auth.signOut(); setSession(false); }} />) : <AuthScreen onAuthenticated={() => { if (isLocalPreview()) localStorage.setItem('promptchat-session', 'active'); setSession(true); }} />}<SupportChatLauncher /></>;
+}
+
+function SupportChatLauncher() {
+  useEffect(() => {
+    if (window.location.hostname !== 'prompchat.vercel.app' || document.getElementById('prompchat-support-script')) return;
+    const script = document.createElement('script');
+    script.id = 'prompchat-support-script';
+    script.src = `${window.location.origin}/widget.js`;
+    script.async = true;
+    script.setAttribute('data-prompchat-workspace', 'a68157ad70d5fbd7601cf69f7b2fb85f');
+    script.setAttribute('data-prompchat-domain', 'prompchat.vercel.app');
+    script.setAttribute('data-prompchat-launcher', 'custom');
+    document.body.appendChild(script);
+    return () => { script.remove(); document.getElementById('promptchat-widget-frame')?.remove(); };
+  }, []);
+  function openSupport() {
+    const widget = window as Window & { PrompChatWidget?: { open: () => void } };
+    if (widget.PrompChatWidget) { widget.PrompChatWidget.open(); return; }
+    const destination = window.location.hostname === 'prompchat.vercel.app' ? new URL(window.location.href) : new URL('https://prompchat.vercel.app/');
+    destination.searchParams.set('support', '1');
+    window.open(destination.toString(), '_blank', 'noopener,noreferrer');
+  }
+  return <button className="main-support-launcher" onClick={openSupport} aria-label="เปิดแชทกับทีมงาน PrompCHAT" title="คุยกับทีมงาน"><img src={avatar} alt=""/></button>;
 }
 
 function AuthScreen({ onAuthenticated }: { onAuthenticated: () => void }) {
@@ -130,7 +155,7 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: () => void }) {
     setBusy(true); setError(''); setNotice('');
     try {
       if (mode === 'signup') {
-        const { data, error: signupError } = await supabase.auth.signUp({ email, password, options: { data: { name } } });
+        const { data, error: signupError } = await supabase.auth.signUp({ email, password, options: { data: { name }, emailRedirectTo: 'https://prompchat.vercel.app/' } });
         if (signupError) throw signupError;
         if (data.session) onAuthenticated();
         else setNotice('สมัครแล้ว กรุณายืนยันอีเมล จากนั้นกลับมาเข้าสู่ระบบ');
@@ -183,17 +208,38 @@ function WorkspaceGate({ onLogout }: { onLogout: () => void }) {
   const [domain, setDomain] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [deletingId, setDeletingId] = useState('');
   useEffect(() => { void listWorkspaces().then((items) => { setWorkspaces(items); if (items.length === 1) setSelectedId(items[0].id); }).catch((failure) => setError(failure instanceof Error ? failure.message : 'โหลด workspace ไม่สำเร็จ')); }, []);
-  async function submit(event: FormEvent) { event.preventDefault(); const normalized = domain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, ''); if (!name.trim() || !/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(normalized)) { setError('กรอกชื่อแบรนด์และโดเมน เช่น myshop.com'); return; } setBusy(true); setError(''); try { const created = await createWorkspace(name.trim(), normalized); setWorkspaces((items) => [...(items || []), created]); setSelectedId(created.id); } catch (failure) { setError(failure instanceof Error ? failure.message : 'สร้าง workspace ไม่สำเร็จ'); } finally { setBusy(false); } }
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    const normalized = domain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/+$/, '').replace(/\.+$/, '');
+    if (!name.trim() || !/^[a-z0-9-]+(?:\.[a-z0-9-]+)+$/.test(normalized)) { setError('กรอกชื่อแบรนด์และโดเมนให้ถูกต้อง เช่น shop.example.com'); return; }
+    if (workspaces.length >= 5) { setError('จำกัดสูงสุด 5 เว็บไซต์ ลบ workspace ที่ไม่ใช้ก่อน'); return; }
+    if (workspaces.some((item) => item.domain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/+$/, '').replace(/\.+$/, '') === normalized)) { setError('โดเมนนี้มี workspace อยู่แล้ว เลือกอันเดิมหรือใช้โดเมนอื่น'); return; }
+    setBusy(true); setError('');
+    try { const created = await createWorkspace(name.trim(), normalized); setWorkspaces((items) => [...(items || []), created]); setSelectedId(created.id); }
+    catch (failure) { setError(failure instanceof Error ? failure.message : 'สร้าง workspace ไม่สำเร็จ'); }
+    finally { setBusy(false); }
+  }
+  async function removeWorkspace(item: RemoteWorkspace) {
+    const confirmed = window.confirm(`ลบ workspace “${item.name}” (${item.domain}) ถาวรหรือไม่? บทสนทนา ลูกค้า และไฟล์แนบทั้งหมดของเว็บนี้จะถูกลบและกู้คืนไม่ได้`);
+    if (!confirmed) return;
+    setDeletingId(item.id); setError('');
+    try { await deleteWorkspace(item.id); setWorkspaces((items) => (items || []).filter((entry) => entry.id !== item.id)); }
+    catch (failure) { setError(failure instanceof Error ? `ลบไม่สำเร็จ: ${failure.message}` : 'ลบ workspace ไม่สำเร็จ'); }
+    finally { setDeletingId(''); }
+  }
   if (!workspaces) return <div className="workspace-gate"><div className="workspace-gate-card">{error || 'กำลังโหลด workspace...'}</div></div>;
   const selected = workspaces.find((item) => item.id === selectedId);
   if (selected) return <Workspace workspace={selected} onLogout={onLogout} onSwitchWorkspace={() => setSelectedId('')} />;
-  return <div className="workspace-gate"><div className="workspace-gate-card"><img src={logo} alt="PrompCHAT" /><h1>{workspaces.length ? 'เลือก workspace' : 'สร้าง Chat สำหรับเว็บไซต์ของคุณ'}</h1><p>แต่ละ workspace มีคีย์ฝังเว็บและบทสนทนาของตัวเอง</p>{workspaces.map((item) => <button className="workspace-choice" key={item.id} onClick={() => setSelectedId(item.id)}><strong>{item.name}</strong><span>{item.domain}</span><span>→</span></button>)}<form onSubmit={submit}><label>ชื่อแบรนด์<input value={name} onChange={(event) => setName(event.target.value)} placeholder="เช่น Moon Studio" /></label><label>โดเมนเว็บไซต์<input value={domain} onChange={(event) => setDomain(event.target.value)} placeholder="myshop.com" /></label>{error && <div className="form-error">{error}</div>}<Button type="submit" disabled={busy}>{busy ? 'กำลังสร้าง...' : 'สร้าง Chat ใหม่'}</Button></form><button className="gate-logout" onClick={onLogout}>ออกจากระบบ</button></div></div>;
+  return <div className="workspace-gate"><div className="workspace-gate-card"><img src={logo} alt="PrompCHAT" /><h1>{workspaces.length ? 'เลือกเว็บไซต์' : 'สร้าง Chat สำหรับเว็บไซต์ของคุณ'}</h1><p>จัดการได้สูงสุด 5 เว็บไซต์ · แต่ละ workspace มีแชตและการตั้งค่าแยกกัน</p><div className="workspace-count"><span>เว็บไซต์ที่ใช้</span><strong>{workspaces.length} / 5</strong></div>{workspaces.map((item) => <div className="workspace-choice-row" key={item.id}><button className="workspace-choice" onClick={() => setSelectedId(item.id)}><strong>{item.name}</strong><span>{item.domain}</span><span>→</span></button><button className="workspace-delete" onClick={() => void removeWorkspace(item)} disabled={!!deletingId} aria-label={`ลบ ${item.domain}`} title="ลบเว็บไซต์"><Trash2 size={16}/></button></div>)}<form onSubmit={submit}><label>ชื่อแบรนด์<input value={name} onChange={(event) => setName(event.target.value)} placeholder="เช่น Moon Studio" /></label><label>โดเมนเว็บไซต์<input value={domain} onChange={(event) => setDomain(event.target.value)} placeholder="shop.example.com" /></label>{error && <div className="form-error">{error}</div>}<Button type="submit" disabled={busy || workspaces.length >= 5}>{workspaces.length >= 5 ? 'ครบ 5 เว็บไซต์แล้ว' : busy ? 'กำลังสร้าง...' : 'สร้าง Chat ใหม่'}</Button></form><button className="gate-logout" onClick={onLogout}>ออกจากระบบ</button></div></div>;
 }
 
 function Workspace({ onLogout, workspace, onSwitchWorkspace }: { onLogout: () => void; workspace?: RemoteWorkspace; onSwitchWorkspace?: () => void }) {
   const [view, setView] = useState<View>('overview'); const [filter, setFilter] = useState<Filter>('ทั้งหมด'); const [conversations, setConversations] = useState<Conversation[]>(() => { if (workspace) return []; try { return JSON.parse(localStorage.getItem('promptchat-conversations-v2') || 'null') || seedConversations; } catch { return seedConversations; } }); const [activeId, setActiveId] = useState<number | string>(1); const [query, setQuery] = useState(''); const [composer, setComposer] = useState(''); const [showEmbed, setShowEmbed] = useState(false); const [showWidget, setShowWidget] = useState(false); const [toast, setToast] = useState(''); const [botEnabled, setBotEnabled] = useState(() => localStorage.getItem('promptchat-bot-enabled') !== 'false'); const [agentIcon, setAgentIcon] = useState(() => localStorage.getItem('promptchat-agent-icon') || 'PA');
   const [chatSettings, setChatSettings] = useState<ChatSettings>(defaultChatSettings);
+  const [quickReplyItems, setQuickReplyItems] = useState<string[]>(quickReplies);
+  const updateQuickReplyItems = useCallback((items: string[]) => setQuickReplyItems(items), []);
   const [settingsBusy, setSettingsBusy] = useState(false);
   useEffect(() => { if (!workspace || !supabase) return; let active = true; void supabase.from('workspace_settings').select('brand_name,welcome_message,offline_message,color_primary,bot_enabled,bot_handoff_keyword,agent_icon,visitor_icon').eq('workspace_id', workspace.id).single().then(({ data, error }) => { if (!active) return; if (error) { setToast(`โหลดการตั้งค่าไม่สำเร็จ: ${error.message}`); return; } if (data) { setChatSettings({ ...defaultChatSettings, ...data }); setAgentIcon(data.agent_icon || 'PA'); setBotEnabled(data.bot_enabled); } }); return () => { active = false; }; }, [workspace]);
   async function saveChatSettings() { if (!workspace || !supabase) { setAgentIcon(chatSettings.agent_icon); setBotEnabled(chatSettings.bot_enabled); setToast('บันทึกการตั้งค่าในตัวอย่างแล้ว'); return; } setSettingsBusy(true); const { error } = await supabase.from('workspace_settings').update({ ...chatSettings, updated_at: new Date().toISOString() }).eq('workspace_id', workspace.id); setSettingsBusy(false); if (error) { setToast(`บันทึกไม่สำเร็จ: ${error.message}`); return; } setAgentIcon(chatSettings.agent_icon); setBotEnabled(chatSettings.bot_enabled); setToast('บันทึกการตั้งค่าแล้ว'); }
@@ -212,8 +258,8 @@ function Workspace({ onLogout, workspace, onSwitchWorkspace }: { onLogout: () =>
   function simulateVisitor() { if (workspace) return; const id = Date.now(); const newConversation: Conversation = { id, name: 'Mookda P.', initials: 'MP', avatarColor: '#52b7a3', channel: 'your-website.com', status: 'รอตอบ', time: formatNow(), preview: 'สวัสดีค่ะ อยากสอบถามรายละเอียดแพ็กเกจ', unread: 1, email: 'mookda@example.com', page: '/home', messages: [{ id: id + 1, sender: 'visitor', text: 'สวัสดีค่ะ อยากสอบถามรายละเอียดแพ็กเกจ', time: formatNow() }] }; setConversations((items) => [newConversation, ...items]); setActiveId(id); setFilter('ทั้งหมด'); setView('inbox'); setToast('มีข้อความใหม่เข้ามา'); }
   return <motion.div className="app-shell" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: .35 }}>
     <header className="topbar"><div className="topbar-brand"><img src={logo} alt="PrompCHAT" /><span>Promp<span>CHAT</span></span></div><div className="topbar-center"><button className="workspace-switcher" onClick={onSwitchWorkspace} disabled={!onSwitchWorkspace}><span className="workspace-mark">P</span><span>{workspace?.name || 'PrompCHAT workspace'}</span><ChevronDown size={15} /></button><div className="live-pill"><span className="status-dot" /> ออนไลน์</div></div><div className="topbar-actions"><button className="icon-button" aria-label="การแจ้งเตือน"><Bell size={19} />{conversations.some((item) => item.status === 'รอตอบ') && <i>{conversations.filter((item) => item.status === 'รอตอบ').length}</i>}</button><div className="topbar-avatar">PA</div><div className="user-summary"><strong>Promp Admin</strong><small>เจ้าของ workspace</small></div><button className="icon-button" onClick={onLogout} aria-label="ออกจากระบบ"><LogOut size={17} /></button></div></header>
-    <div className="app-body"><aside className="sidebar"><div className="sidebar-label">WORKSPACE</div><nav><SidebarItem icon={<LayoutDashboard size={18} />} label="ภาพรวม" active={view === 'overview'} onClick={() => setView('overview')} /><SidebarItem icon={<MessageCircle size={18} />} label="กล่องข้อความ" active={view === 'inbox'} badge={String(conversations.filter((item) => item.status === 'รอตอบ').length)} onClick={() => setView('inbox')} /><SidebarItem icon={<Users size={18} />} label="ผู้เยี่ยมชม" active={view === 'visitors'} onClick={() => setView('visitors')} /></nav><div className="sidebar-label sidebar-label-spaced">จัดการระบบ</div><nav><SidebarItem icon={<Code2 size={18} />} label="ติดตั้งบนเว็บไซต์" active={view === 'install'} onClick={() => setView('install')} /><SidebarItem icon={<PlugZap size={18} />} label="API & integrations" active={view === 'api'} onClick={() => setView('api')} /><SidebarItem icon={<Settings size={18} />} label="ตั้งค่า" active={view === 'settings'} onClick={() => setView('settings')} /></nav><div className="sidebar-spacer" /><div className="sidebar-help"><div className="help-icon"><Headphones size={18} /></div><div><strong>ต้องการความช่วยเหลือ?</strong><p>ทีมของเราพร้อมดูแลคุณ</p><button onClick={() => setToast('ทีมงานจะติดต่อกลับเร็ว ๆ นี้')}>คุยกับทีมงาน <span>→</span></button></div></div><div className="sidebar-footer"><div className="mini-avatar">PA</div><div><strong>PrompCHAT</strong><small>{workspace ? workspace.domain : 'Local preview'}</small></div><MoreHorizontal size={17} /></div></aside>
-<main className="workspace-main">{view === 'inbox' && <InboxView conversations={filteredConversations} active={activeConversation} filter={filter} query={query} setFilter={setFilter} setQuery={setQuery} onSelect={setActiveId} composer={composer} setComposer={setComposer} onSend={sendMessage} onSendFile={sendFile} onDone={markDone} onEmbed={() => setShowEmbed(true)} onPreview={() => setShowWidget(true)} onSimulate={workspace ? undefined : simulateVisitor} agentIcon={agentIcon} visitorIcon={chatSettings.visitor_icon} quickReplies={quickReplies} />}{view === 'overview' && <OverviewView conversations={conversations} onInbox={() => setView('inbox')} onInstall={() => setView('install')} workspace={workspace} />}{view === 'visitors' && <VisitorsView conversations={conversations} />}{view === 'install' && <InstallView onCopy={copyEmbed} code={embedScriptCode(workspace)} workspace={workspace} />}{view === 'api' && <ApiView code={embedScriptCode(workspace)} />}{view === 'settings' && <WorkspaceSettings value={chatSettings} onChange={setChatSettings} onSave={() => void saveChatSettings()} busy={settingsBusy} />}</main>
+    <div className="app-body"><aside className="sidebar"><div className="sidebar-label">WORKSPACE</div><nav><SidebarItem icon={<LayoutDashboard size={18} />} label="ภาพรวม" active={view === 'overview'} onClick={() => setView('overview')} /><SidebarItem icon={<MessageCircle size={18} />} label="กล่องข้อความ" active={view === 'inbox'} badge={String(conversations.filter((item) => item.status === 'รอตอบ').length)} onClick={() => setView('inbox')} /><SidebarItem icon={<Users size={18} />} label="ผู้เยี่ยมชม" active={view === 'visitors'} onClick={() => setView('visitors')} /></nav><div className="sidebar-label sidebar-label-spaced">จัดการระบบ</div><nav><SidebarItem icon={<Code2 size={18} />} label="ติดตั้งบนเว็บไซต์" active={view === 'install'} onClick={() => setView('install')} /><SidebarItem icon={<PlugZap size={18} />} label="API & integrations" active={view === 'api'} onClick={() => setView('api')} /><SidebarItem icon={<Settings size={18} />} label="ตั้งค่า" active={view === 'settings'} onClick={() => setView('settings')} /></nav><div className="sidebar-spacer" /><div className="sidebar-help"><div className="help-icon"><Headphones size={18} /></div><div><strong>ต้องการความช่วยเหลือ?</strong><p>ทีมของเราพร้อมดูแลคุณ</p><button onClick={() => { const widget = window as Window & { PrompChatWidget?: { open: () => void } }; if (widget.PrompChatWidget) widget.PrompChatWidget.open(); else if (window.location.hostname !== 'prompchat.vercel.app') window.open('https://prompchat.vercel.app/?support=1', '_blank', 'noopener,noreferrer'); }}>คุยกับทีมงาน <span>→</span></button></div></div><div className="sidebar-footer"><div className="mini-avatar">PA</div><div><strong>PrompCHAT</strong><small>{workspace ? workspace.domain : 'Local preview'}</small></div><MoreHorizontal size={17} /></div></aside>
+<main className="workspace-main">{view === 'inbox' && <InboxView conversations={filteredConversations} active={activeConversation} filter={filter} query={query} setFilter={setFilter} setQuery={setQuery} onSelect={setActiveId} composer={composer} setComposer={setComposer} onSend={sendMessage} onSendFile={sendFile} onDone={markDone} onEmbed={() => setShowEmbed(true)} onPreview={() => setShowWidget(true)} onSimulate={workspace ? undefined : simulateVisitor} agentIcon={agentIcon} visitorIcon={chatSettings.visitor_icon} quickReplies={quickReplyItems} />}{view === 'overview' && <OverviewView conversations={conversations} onInbox={() => setView('inbox')} onInstall={() => setView('install')} workspace={workspace} />}{view === 'visitors' && <VisitorsView conversations={conversations} />}{view === 'install' && <InstallView onCopy={copyEmbed} code={embedScriptCode(workspace)} workspace={workspace} />}{view === 'api' && <ApiView code={embedScriptCode(workspace)} />}{view === 'settings' && <div><WorkspaceSettings value={chatSettings} onChange={setChatSettings} onSave={() => void saveChatSettings()} busy={settingsBusy} /><AutomationRules workspaceId={workspace?.id} onQuickRepliesChange={updateQuickReplyItems} /></div>}</main>
     </div>
     <AnimatePresence>{showEmbed && <EmbedModal onClose={() => setShowEmbed(false)} onCopy={copyEmbed} code={embedScriptCode(workspace)} />}{showWidget && <WidgetPreview onClose={() => setShowWidget(false)} />}</AnimatePresence>{toast && <motion.div className="toast" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }}><Check size={16} /> {toast}</motion.div>}
   </motion.div>;
@@ -228,10 +274,11 @@ function AdminComposer({ value, onChange, onSend, onSendFile }: { value: string;
   const [upload, setUpload] = useState<OptimizedUpload | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
   const [emojiOpen, setEmojiOpen] = useState(false);
-  async function handleFile(file?: File) { if (!file) return; setIsCompressing(true); setUpload(await optimizeUpload(file)); setIsCompressing(false); }
+  const [uploadError, setUploadError] = useState('');
+  async function handleFile(file?: File) { if (!file) return; setIsCompressing(true); setUploadError(''); try { setUpload(await optimizeUpload(file)); } catch (failure) { setUploadError(failure instanceof Error ? failure.message : 'ไฟล์นี้ส่งไม่ได้'); } finally { setIsCompressing(false); } }
   function submit(event: FormEvent) { if (upload) { event.preventDefault(); void onSendFile(upload, value); setUpload(null); } else onSend(event); }
   return <div className="admin-composer-wrap">
-    {upload && <div className="admin-attachment"><Paperclip size={13} /><span>{upload.file.name} · {formatBytes(upload.optimizedSize)}{upload.compressed ? ` จาก ${formatBytes(upload.originalSize)}` : ''}</span><button onClick={() => setUpload(null)} aria-label="ลบไฟล์แนบ"><X size={13} /></button></div>}
+      {uploadError && <div className="form-error">{uploadError}</div>}{upload && <div className="admin-attachment"><Paperclip size={13} /><span>{upload.file.name} · {formatBytes(upload.optimizedSize)}{upload.compressed ? ` จาก ${formatBytes(upload.originalSize)}` : ''}</span><button onClick={() => setUpload(null)} aria-label="ลบไฟล์แนบ"><X size={13} /></button></div>}
     <form className="composer" onSubmit={submit}>
       <label className="composer-icon composer-file" aria-label="แนบไฟล์"><Paperclip size={18} /><input type="file" accept="image/*,video/*,.pdf,.doc,.docx" onChange={(event) => { void handleFile(event.target.files?.[0]); event.currentTarget.value = ''; }} /></label>
       <input value={value} onChange={(event) => onChange(event.target.value)} placeholder={isCompressing ? 'กำลังบีบอัดไฟล์...' : 'พิมพ์ข้อความเพื่อตอบกลับ...'} />
@@ -260,6 +307,7 @@ function InstallView({ onCopy, code, workspace }: { onCopy: () => void; code: st
 
 function InstallVerification({ workspace }: { workspace: RemoteWorkspace }) {
   const [status, setStatus] = useState(workspace.domain_verified ? 'ยืนยันโดเมนแล้ว' : 'รอการติดตั้ง');
+  const [issues, setIssues] = useState<string[]>([]);
   const [checking, setChecking] = useState(false);
   async function verify() {
     if (!supabase) return;
@@ -268,11 +316,12 @@ function InstallVerification({ workspace }: { workspace: RemoteWorkspace }) {
       const { data } = await supabase.auth.getSession();
       const response = await fetch('/api/verify-installation', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${data.session?.access_token || ''}` }, body: JSON.stringify({ embedKey: workspace.embed_key }) });
       const result = await response.json();
-      setStatus(result.verified ? 'ติดตั้งสำเร็จแล้ว' : `ยังไม่พบสคริปต์บน ${workspace.domain}`);
+      setStatus(result.verified ? 'ติดตั้งสำเร็จแล้ว' : result.message || `ยังไม่พบสคริปต์บน ${workspace.domain}`);
+      setIssues(Array.isArray(result.issues) ? result.issues : []);
     } catch { setStatus('ตรวจสอบไม่สำเร็จ ลองอีกครั้ง'); }
     finally { setChecking(false); }
   }
-  return <div className="install-verify"><span>{status}</span><button className="primary-button small" onClick={() => void verify()} disabled={checking}>{checking ? 'กำลังตรวจ...' : 'ตรวจสอบการติดตั้ง'}</button></div>;
+  return <div className="install-verify"><div><span>{status}</span>{issues.length > 0 && <ul>{issues.map((issue) => <li key={issue}>{issue}</li>)}</ul>}</div><button className="primary-button small" onClick={() => void verify()} disabled={checking}>{checking ? 'กำลังตรวจ...' : 'ตรวจสอบการติดตั้ง'}</button></div>;
 }
 
 function ApiDocsDialog() { return <Dialog><DialogTrigger asChild><Button variant="outline" size="sm">ดู API docs</Button></DialogTrigger><DialogContent><DialogHeader><DialogTitle>PrompCHAT API</DialogTitle><DialogDescription>เส้นทางสำหรับทดสอบระบบและเชื่อมต่อหลังเปิด Supabase</DialogDescription></DialogHeader><div className="api-docs-body"><code>GET /api/health</code><span>ตรวจว่าบริการออนไลน์</span><code>POST /api/bot-reply</code><span>ทดสอบกฎตอบอัตโนมัติ</span><code>POST /api/verify-installation</code><span>ตรวจสคริปต์บนโดเมนที่ผูกกับ workspace</span></div></DialogContent></Dialog>; }
@@ -306,13 +355,13 @@ function EmbeddedWidget() {
   const [messages, setMessages] = useState<Message[]>([{ id: 1, sender: 'bot', text: 'สวัสดีค่ะ 👋 มีอะไรให้เราช่วยไหมคะ?', time: formatNow() }]);
   useEffect(() => { window.parent.postMessage({ type: 'promptchat:resize', open }, '*'); }, [open]);
   useEffect(() => { const listener = (event: MessageEvent) => { if (event.source !== window.parent) return; if (event.data?.type === 'promptchat:open') setOpen(true); if (event.data?.type === 'promptchat:close') setOpen(false); if (event.data?.type === 'promptchat:toggle') setOpen((value) => !value); }; window.addEventListener('message', listener); return () => window.removeEventListener('message', listener); }, []);
-useEffect(() => { if (isLocalPreview()) return; let active = true; let unsubscribe = () => undefined; const setup = async () => { try { const key = new URLSearchParams(window.location.search).get('workspace'); if (!key) throw new Error('ไม่พบคีย์ของวิดเจ็ต'); const initialized = await initializeWidget(key); const conversationId = await getOrCreateVisitorConversation(initialized.client, initialized.workspaceId, initialized.visitorId); if (!active) return; setRemote({ ...initialized, conversationId }); const [settingsResult, quickResult, messagesResult] = await Promise.all([initialized.client.from('workspace_settings').select('brand_name,welcome_message,agent_icon,visitor_icon,color_primary').eq('workspace_id', initialized.workspaceId).single(), initialized.client.from('quick_replies').select('label').eq('workspace_id', initialized.workspaceId).eq('is_active', true).order('sort_order'), initialized.client.from('messages').select('id,conversation_id,sender_type,body,attachment_url,attachment_name,created_at').eq('conversation_id', conversationId).order('created_at')]); if (!active) return; const settings = settingsResult.data; if (settings) { setWidgetName(settings.brand_name || 'PrompCHAT'); setWidgetAgentIcon(settings.agent_icon || 'PA'); setWidgetVisitorIcon(settings.visitor_icon || '👤'); if (/^#[0-9a-fA-F]{6}$/.test(settings.color_primary || '')) setWidgetPrimary(settings.color_primary); } setQuickOptions((quickResult.data || []).map((item) => item.label)); if (messagesResult.data?.length) setMessages(messagesResult.data.map((item) => ({ id: item.id, sender: item.sender_type, text: item.body || '', attachmentName: item.attachment_name || undefined, remoteAttachmentPath: item.attachment_url || undefined, time: new Intl.DateTimeFormat('th-TH', { hour: '2-digit', minute: '2-digit' }).format(new Date(item.created_at)) }))); else if (settings?.welcome_message) setMessages([{ id: 'welcome', sender: 'bot', text: settings.welcome_message, time: formatNow() }]); unsubscribe = subscribeVisitorConversation(initialized.client, conversationId, (item) => { setMessages((previous) => previous.some((message) => message.id === item.id) ? previous : [...previous, { id: item.id, sender: item.sender_type, text: item.body || '', attachmentName: item.attachment_name || undefined, remoteAttachmentPath: item.attachment_url || undefined, time: new Intl.DateTimeFormat('th-TH', { hour: '2-digit', minute: '2-digit' }).format(new Date(item.created_at)) }]); }); } catch (failure) { if (active) setWidgetError(failure instanceof Error ? failure.message : 'เปิดแชตไม่สำเร็จ'); } }; void setup(); return () => { active = false; unsubscribe(); }; }, []);
+  useEffect(() => { if (isLocalPreview()) return; let active = true; let unsubscribe = () => undefined; const setup = async () => { try { const key = new URLSearchParams(window.location.search).get('workspace'); if (!key) throw new Error('ไม่พบคีย์ของวิดเจ็ต'); let siteOrigin = ''; try { siteOrigin = new URL(document.referrer).origin; } catch { /* origin is required for production widgets */ } const initialized = await initializeWidget(key, siteOrigin); const conversationId = await getOrCreateVisitorConversation(initialized.client, initialized.workspaceId, initialized.visitorId); if (!active) return; setRemote({ ...initialized, conversationId }); const [settingsResult, quickResult, messagesResult] = await Promise.all([initialized.client.from('workspace_settings').select('brand_name,welcome_message,agent_icon,visitor_icon,color_primary').eq('workspace_id', initialized.workspaceId).single(), initialized.client.from('quick_replies').select('label').eq('workspace_id', initialized.workspaceId).eq('is_active', true).order('sort_order'), initialized.client.from('messages').select('id,conversation_id,sender_type,body,attachment_url,attachment_name,created_at').eq('conversation_id', conversationId).order('created_at')]); if (!active) return; const settings = settingsResult.data; if (settings) { setWidgetName(settings.brand_name || 'PrompCHAT'); setWidgetAgentIcon(settings.agent_icon || 'PA'); setWidgetVisitorIcon(settings.visitor_icon || '👤'); if (/^#[0-9a-fA-F]{6}$/.test(settings.color_primary || '')) setWidgetPrimary(settings.color_primary); } setQuickOptions((quickResult.data || []).map((item) => item.label)); if (messagesResult.data?.length) setMessages(messagesResult.data.map((item) => ({ id: item.id, sender: item.sender_type, text: item.body || '', attachmentName: item.attachment_name || undefined, remoteAttachmentPath: item.attachment_url || undefined, time: new Intl.DateTimeFormat('th-TH', { hour: '2-digit', minute: '2-digit' }).format(new Date(item.created_at)) }))); else if (settings?.welcome_message) setMessages([{ id: 'welcome', sender: 'bot', text: settings.welcome_message, time: formatNow() }]); unsubscribe = subscribeVisitorConversation(initialized.client, conversationId, (item) => { setMessages((previous) => previous.some((message) => message.id === item.id) ? previous : [...previous, { id: item.id, sender: item.sender_type, text: item.body || '', attachmentName: item.attachment_name || undefined, remoteAttachmentPath: item.attachment_url || undefined, time: new Intl.DateTimeFormat('th-TH', { hour: '2-digit', minute: '2-digit' }).format(new Date(item.created_at)) }]); }); } catch (failure) { if (active) setWidgetError(failure instanceof Error ? failure.message : 'เปิดแชตไม่สำเร็จ'); } }; void setup(); return () => { active = false; unsubscribe(); }; }, []);
   useEffect(() => {
     if (!isLocalPreview()) return;
     const sync = () => { try { const session = localStorage.getItem('promptchat-visitor-session'); const list = JSON.parse(localStorage.getItem('promptchat-conversations-v2') || '[]') as Conversation[]; const current = list.find((item) => item.visitorSession === session); if (current) setMessages(current.messages); } catch { /* local preview only */ } };
     sync(); window.addEventListener('storage', sync); return () => window.removeEventListener('storage', sync);
   }, []);
-  async function handleFile(file?: File) { if (!file) return; setIsCompressing(true); const optimized = await optimizeUpload(file); setAttachment(optimized); setIsCompressing(false); }
+  async function handleFile(file?: File) { if (!file) return; setIsCompressing(true); try { setAttachment(await optimizeUpload(file)); setWidgetError(''); } catch (failure) { setWidgetError(failure instanceof Error ? failure.message : 'ไฟล์นี้ส่งไม่ได้'); } finally { setIsCompressing(false); } }
   async function send() {
     const text = draft.trim();
     if ((!text && !attachment) || isCompressing) return;

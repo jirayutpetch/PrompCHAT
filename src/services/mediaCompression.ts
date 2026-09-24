@@ -7,6 +7,9 @@ export type OptimizedUpload = {
 };
 
 const imageTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
+const allowedTypes = new Set([...imageTypes, 'image/gif', 'video/mp4', 'video/webm', 'application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']);
+const maxInputBytes = 100 * 1024 * 1024;
+const maxStoredBytes = 15 * 1024 * 1024;
 
 export function formatBytes(bytes: number) {
   if (!bytes) return '0 B';
@@ -81,10 +84,15 @@ async function compressVideo(file: File) {
 }
 
 export async function optimizeUpload(file: File): Promise<OptimizedUpload> {
+  if (!allowedTypes.has(file.type)) throw new Error('ชนิดไฟล์นี้ยังไม่รองรับ กรุณาใช้ JPG, PNG, WebP, GIF, MP4, WebM, PDF หรือ Word');
+  if (file.size > maxInputBytes) throw new Error('ไฟล์ใหญ่เกิน 100 MB ไม่สามารถประมวลผลได้');
   try {
     const optimized = file.type.startsWith('video/') ? await compressVideo(file) : imageTypes.has(file.type) ? await compressImage(file) : file;
+    if (optimized.size > maxStoredBytes) throw new Error('ไฟล์หลังบีบอัดยังเกิน 15 MB กรุณาตัด/ลดขนาดไฟล์ก่อนส่ง');
     return { file: optimized, originalSize: file.size, optimizedSize: optimized.size, compressed: optimized.size < file.size, method: optimized === file ? 'original' : file.type.startsWith('video/') ? 'video' : 'image' };
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('15 MB')) throw error;
+    if (file.size > maxStoredBytes) throw new Error('ไม่สามารถบีบอัดให้เหลือต่ำกว่า 15 MB ได้ กรุณาลดขนาดหรือตัดไฟล์ก่อนส่ง');
     return { file, originalSize: file.size, optimizedSize: file.size, compressed: false, method: 'original' };
   }
 }
