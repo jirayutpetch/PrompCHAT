@@ -148,7 +148,7 @@ function AuthScreen({ onAuthenticated }: { onAuthenticated: () => void }) {
     <section className="auth-visual">
       <div className="visual-glow visual-glow-one" /><div className="visual-glow visual-glow-two" />
       <div className="auth-brand"><img src={logo} alt="PrompCHAT" /><span>PrompCHAT</span></div>
-      <div className="visual-copy"><div className="eyebrow"><span className="status-dot" /> LIVE CHAT PLATFORM</div><h1>คุยกับลูกค้า<br /><em>ได้ทันที</em> ทุกช่องทาง</h1><p>แชตสดสำหรับเว็บไซต์ที่ช่วยให้ทีมของคุณตอบไวขึ้น ดูแลลูกค้าเป็นระบบ และไม่พลาดทุกโอกาสสำคัญ</p></div>
+      <div className="visual-copy"><div className="eyebrow"><span className="status-dot" /> LIVE CHAT PLATFORM</div><h1>คุยกับลูกค้า<br /><em>ได้ทันที</em> บนเว็บไซต์</h1><p>แชตสดสำหรับเว็บไซต์ที่ช่วยให้ทีมของคุณตอบไวขึ้น ดูแลลูกค้าเป็นระบบ และไม่พลาดทุกโอกาสสำคัญ</p></div>
       <div className="visual-art-wrap"><img className="visual-art" src={laptop} alt="PrompCHAT live chat mascot" /><div className="floating-note note-one"><span className="note-icon"><MessageCircle size={16} /></span><div><strong>ข้อความใหม่</strong><small>รับแชตจากเว็บของคุณแบบสด</small></div></div><div className="floating-note note-two"><span className="note-icon blue"><Zap size={15} /></span><div><strong>ตอบกลับเร็วขึ้น</strong><small>ด้วยคำตอบลัดของทีม</small></div></div></div>
       <div className="visual-footer"><span><Check size={15} /> ทดลองใช้งานได้ทันที</span><span><Check size={15} /> ติดตั้งด้วยโค้ดเดียว</span><span><Check size={15} /> ออกแบบตามแบรนด์คุณ</span></div>
     </section>
