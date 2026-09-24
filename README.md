@@ -2,7 +2,7 @@
 
 Live chat สำหรับฝังบนเว็บไซต์อื่น พร้อมกล่องข้อความสำหรับทีมงาน สร้างด้วย Next.js 16, React 19 และ Supabase
 
-เว็บไซต์จริง: https://promp-chat.vercel.app/
+เว็บไซต์จริง: https://prompchat.vercel.app/ (โดเมนเดิม `https://promp-chat.vercel.app/` ยังใช้งานได้)
 
 ## พัฒนาบนเครื่อง
 
@@ -18,7 +18,7 @@ Live chat สำหรับฝังบนเว็บไซต์อื่น 
 
 คัดลอก script จากหน้า “ติดตั้งบนเว็บไซต์” หลังสร้าง workspace และยืนยันโดเมน เลือกปุ่มแชตเริ่มต้น หรือเลือก “ใช้ปุ่มของเว็บไซต์ฉัน” เพื่อซ่อนปุ่ม PrompCHAT แล้วสั่งเปิดผ่าน `window.PrompChatWidget.open()` ปิดด้วย `close()` หรือสลับด้วย `toggle()` สคริปต์เก่า `window.PromptChatWidget` และ `data-promptchat-workspace` ยังใช้ได้เพื่อไม่ให้เว็บไซต์ที่ติดตั้งไว้แล้วหยุดทำงาน
 
-ตัวฝังใส่ metadata, DOM marker และ JavaScript fingerprint ของ PrompCHAT ไว้ในเว็บปลายทาง `docs/wappalyzer-promptchat.json` เป็นกฎตัวอย่างสำหรับส่งให้ฐานข้อมูลตัวตรวจจับเทคโนโลยี การมี fingerprint ไม่ทำให้ Wappalyzer แสดงชื่อทันที; ต้องให้ผู้ดูแลฐานข้อมูลรับกฎก่อน
+ตัวฝังใส่ metadata, DOM marker และ JavaScript fingerprint ของ PrompCHAT ไว้ในเว็บปลายทาง `docs/wappalyzer-prompchat.json` เป็นกฎตัวอย่างสำหรับส่งให้ฐานข้อมูลตัวตรวจจับเทคโนโลยี การมี fingerprint ไม่ทำให้ Wappalyzer แสดงชื่อทันที; ต้องให้ผู้ดูแลฐานข้อมูลรับกฎก่อน
 
 ## การตรวจสอบ
 

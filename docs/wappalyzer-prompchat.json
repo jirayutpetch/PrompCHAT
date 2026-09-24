@@ -2,7 +2,7 @@
   "PrompCHAT": {
     "description": "Embeddable live chat and customer support workspace for websites.",
     "cats": [52],
-    "website": "https://promp-chat.vercel.app",
+    "website": "https://prompchat.vercel.app",
     "js": {
       "PrompChatWidget.technology": "^PrompCHAT Live Chat$"
     },
