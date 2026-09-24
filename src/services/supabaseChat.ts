@@ -149,6 +149,19 @@ export async function sendRemoteVisitorMessage(client: SupabaseClient, workspace
   if (error) throw error;
   const { error: automationError } = await client.rpc('apply_visitor_automation', { target_conversation: conversationId, target_message: inserted.id });
   if (automationError) throw automationError;
+  void notifyTelegramOfVisitorMessage(client, inserted.id);
+}
+
+async function notifyTelegramOfVisitorMessage(client: SupabaseClient, messageId: string) {
+  try {
+    const { data } = await client.auth.getSession();
+    if (!data.session?.access_token) return;
+    await fetch('/api/telegram/notify', {
+      method: 'POST', keepalive: true,
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${data.session.access_token}` },
+      body: JSON.stringify({ messageId }),
+    });
+  } catch { /* chat delivery already succeeded; Telegram can be reconnected in settings */ }
 }
 
 export async function sendRemoteVisitorAttachment(client: SupabaseClient, workspaceId: string, conversationId: string, body: string, file: File) {
@@ -165,6 +178,7 @@ export async function sendRemoteVisitorAttachment(client: SupabaseClient, worksp
     const { error: automationError } = await client.rpc('apply_visitor_automation', { target_conversation: conversationId, target_message: inserted.id });
     if (automationError) throw automationError;
   }
+  void notifyTelegramOfVisitorMessage(client, inserted.id);
 }
 
 export function subscribeVisitorConversation(client: SupabaseClient, conversationId: string, onMessage: (message: RemoteMessage) => void) {

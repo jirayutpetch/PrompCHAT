@@ -6,6 +6,7 @@
 @import "../src/enhancements.css";
 @import "../src/guide.css";
 @import "../src/onboarding.css";
+@import "../src/telegram.css";
 
 @theme {
   --color-prompt-ink: #0b1219;
