@@ -1,10 +1,18 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { describe, it } from 'node:test';
 import { POST as retiredBotReply } from '../app/api/bot-reply/route.ts';
 import { GET as health } from '../app/api/health/route.ts';
 import { POST as verifyInstallation } from '../app/api/verify-installation/route.ts';
 
 describe('public API disclosures', () => {
+  it('publishes a security contact in the standard well-known location', () => {
+    const securityTxt = readFileSync(new URL('../public/.well-known/security.txt', import.meta.url), 'utf8');
+    assert.match(securityTxt, /^Contact: https:\/\/prompchat\.vercel\.app\/\?support=1$/m);
+    assert.match(securityTxt, /^Preferred-Languages: en, th$/m);
+    assert.match(securityTxt, /^Expires: 2027-09-24T00:00:00\.000Z$/m);
+  });
+
   it('reports the health endpoint accurately', async () => {
     const response = await health();
     assert.equal(response.status, 200);

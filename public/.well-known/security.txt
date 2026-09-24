@@ -1,5 +1,4 @@
-Contact: mailto:jame.orori@gmail.com
-Preferred-Languages: th, en
+Contact: https://prompchat.vercel.app/?support=1
+Preferred-Languages: en, th
 Canonical: https://prompchat.vercel.app/.well-known/security.txt
-Policy: https://prompchat.vercel.app/guide
 Expires: 2027-09-24T00:00:00.000Z
